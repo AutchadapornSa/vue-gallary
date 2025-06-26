@@ -1,0 +1,447 @@
+
+├── .gitignore
+├── .vscode
+├── README.md
+├── index.html
+│       # Contents of index.html:
+│       <!doctype html>
+│       <html lang="en">
+│         <head>
+│           <meta charset="UTF-8" />
+│           <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+│           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+│           <title>Vite + Vue</title>
+│         </head>
+│         <body>
+│           <div id="app"></div>
+│           <script type="module" src="/src/main.js"></script>
+│         </body>
+│       </html>
+
+├── package.json
+├── print_code.py
+│       # Contents of print_code.py:
+│       import os
+│       
+│       def display_repo_tree(startpath, output_file):
+│           """
+│           สร้างโครงสร้างแบบ tree ของ repository โดยไม่รวมบางไดเรกทอรีที่ระบุ
+│           และเขียนลงในไฟล์ output พร้อมทั้งแสดงเนื้อหาของไฟล์นามสกุลที่กำหนด (.py, .html, .css, .js)
+│           """
+│           # ไดเรกทอรีที่ต้องการข้าม (ไม่แสดงใน tree)
+│           EXCLUDED_DIRS = {'.env', '.git', '__pycache__', '.venv', 'env', 'node_modules'}
+│       
+│           # นามสกุลไฟล์ที่ต้องการแสดงเนื้อหา
+│           INCLUDED_EXTENSIONS = ('.cs','.py', '.html', '.css', '.js', '.vue')
+│       
+│           def tree_symbols(level, is_last):
+│               """สร้างสัญลักษณ์สำหรับโครงสร้าง tree"""
+│               if level == 0:
+│                   return ""
+│               prefix = "".join("    " if l else "│   " for l in is_last[:-1])
+│               connector = "└── " if is_last[-1] else "├── "
+│               return prefix + connector
+│       
+│           def should_include_item(path):
+│               """
+│               ตรวจสอบว่าไฟล์หรือโฟลเดอร์นี้ควรจะถูกรวมอยู่ใน tree หรือไม่
+│               (เปลี่ยนชื่อจาก is_python_repo_item)
+│               """
+│               basename = os.path.basename(path)
+│       
+│               if os.path.isdir(path) and basename in EXCLUDED_DIRS:
+│                    return False
+│       
+│               if os.path.isdir(path):
+│                    return True # รวมไดเรกทอรีทั้งหมดที่ไม่ได้อยู่ใน EXCLUDED_DIRS
+│       
+│               # รวมไฟล์ config ที่สำคัญ และไฟล์ที่มีนามสกุลตามที่กำหนด
+│               return basename in {
+│                   'requirements.txt', 'Pipfile', 'README.md', 'README.rst',
+│                   '.gitignore', 'setup.py', 'pyproject.toml', 'package.json'
+│               } or path.endswith(INCLUDED_EXTENSIONS)
+│       
+│           with open(output_file, 'w', encoding='utf-8') as out_file:
+│               out_file.write(os.path.basename(startpath) + '\n')
+│       
+│               def walk_dir(path, level=0, is_last_list=[]):
+│                   """ฟังก์ชัน Recursive สำหรับ duyệtไดเรกทอรีและเขียนข้อมูลลงไฟล์"""
+│                   try:
+│                       # คัดกรองรายการในไดเรกทอรี
+│                       entries = sorted([
+│                           entry for entry in os.listdir(path)
+│                           if should_include_item(os.path.join(path, entry))
+│                       ])
+│                   except OSError as e:
+│                       out_file.write(f"{tree_symbols(level, is_last_list + [True])}[Error accessing: {os.path.basename(path)} - {e}]\n")
+│                       return
+│       
+│                   for i, entry in enumerate(entries):
+│                       full_path = os.path.join(path, entry)
+│                       is_current_last = (i == len(entries) - 1)
+│                       current_is_last_list = is_last_list + [is_current_last]
+│       
+│                       out_file.write(tree_symbols(level + 1, current_is_last_list) + entry + '\n')
+│       
+│                       if os.path.isdir(full_path):
+│                           walk_dir(full_path, level + 1, current_is_last_list)
+│                       # **จุดที่แก้ไข:** ตรวจสอบนามสกุลไฟล์จาก INCLUDED_EXTENSIONS
+│                       elif os.path.isfile(full_path) and entry.endswith(INCLUDED_EXTENSIONS):
+│                           # แสดงเนื้อหาของไฟล์
+│                           try:
+│                               content_prefix = "".join("    " if l else "│   " for l in current_is_last_list) + "    "
+│                               out_file.write(f"{content_prefix}# Contents of {entry}:\n")
+│                               with open(full_path, 'r', encoding='utf-8') as f:
+│                                   for line in f:
+│                                       out_file.write(f"{content_prefix}{line.rstrip()}\n")
+│                                   out_file.write('\n') # เว้นบรรทัดหลังจบไฟล์
+│                           except Exception as e:
+│                               out_file.write(f"{content_prefix}[Error reading file: {e}]\n")
+│       
+│               # เริ่มต้นการทำงาน
+│               walk_dir(startpath)
+│       
+│       # --- วิธีการใช้งาน ---
+│       if __name__ == "__main__":
+│           # ระบุ path ของโปรเจกต์ของคุณ
+│           repo_path = './'  # './' หมายถึงไดเรกทอรีปัจจุบัน
+│           output_filename = 'output_tree_full.txt'
+│       
+│           if os.path.isdir(repo_path):
+│               print(f"Generating repository tree for: {os.path.abspath(repo_path)}")
+│               display_repo_tree(repo_path, output_filename)
+│               print(f"Repository tree saved to: {output_filename}")
+│           else:
+│               print(f"Error: Directory not found at {repo_path}")
+
+├── public
+├── src
+│   ├── App.vue
+│   │       # Contents of App.vue:
+│   │       <template>
+│   │         <main class="container mx-auto p-4">
+│   │           <h1 class="text-3xl font-bold mb-4">Gallery</h1>
+│   │           <SearchBar v-model:searchTerm='searchTerm' />
+│   │           <GalleryGrid :searchTerm="searchTerm" @update:searchTerm="searchTerm = $event" />
+│   │         </main>
+│   │       </template>
+│   │       
+│   │       <script setup>
+│   │       import { ref } from 'vue'
+│   │       import GalleryGrid from './components/GalleryGrid.vue'
+│   │       import SearchBar from './components/SearchBar.vue'
+│   │       
+│   │       const searchTerm = ref('')
+│   │       </script>
+
+│   ├── assets
+│   │   └── main.css
+│   │           # Contents of main.css:
+│   │           @tailwind base;
+│   │           @tailwind components;
+│   │           @tailwind utilities;
+
+│   ├── components
+│   │   ├── GalleryGrid.vue
+│   │   │       # Contents of GalleryGrid.vue:
+│   │   │       <template>
+│   │   │           <div>
+│   │   │             <div class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+│   │   │               <ImageCard
+│   │   │                 v-for="img in displayedImages"
+│   │   │                 :key="img.id"
+│   │   │                 :image="img"
+│   │   │                 @tag-click="handleTagClick"
+│   │   │               />
+│   │   │             </div>
+│   │   │             <div ref="sentinel" class="h-4"></div>
+│   │   │           </div>
+│   │   │         </template>
+│   │   │       
+│   │   │         <script setup>
+│   │   │         import { ref, onMounted, watch, computed } from 'vue'
+│   │   │         import { images } from '../mockData'
+│   │   │         import ImageCard from './ImageCard.vue'
+│   │   │       
+│   │   │         const props = defineProps({ searchTerm: String })
+│   │   │         const emit = defineEmits(['update:searchTerm'])
+│   │   │       
+│   │   │         const handleTagClick = (tag) => {
+│   │   │           emit('update:searchTerm', tag)
+│   │   │         }
+│   │   │       
+│   │   │         const imagesFiltered = computed(() => {
+│   │   │           if (!props.searchTerm) return images
+│   │   │           return images.filter(img =>
+│   │   │             img.hashtags.some(tag => tag.toLowerCase().includes(props.searchTerm.toLowerCase()))
+│   │   │           )
+│   │   │         })
+│   │   │       
+│   │   │         const displayedImages = ref([])
+│   │   │         const currentPage = ref(0)
+│   │   │         const pageSize = 4
+│   │   │         const sentinel = ref(null)
+│   │   │       
+│   │   │         const loadMore = () => {
+│   │   │           const start = currentPage.value * pageSize
+│   │   │           const end = start + pageSize
+│   │   │           displayedImages.value.push(...imagesFiltered.value.slice(start, end))
+│   │   │           currentPage.value++
+│   │   │         }
+│   │   │       
+│   │   │         onMounted(() => {
+│   │   │           loadMore()
+│   │   │           const observer = new IntersectionObserver((entries) => {
+│   │   │             if (entries[0].isIntersecting) loadMore()
+│   │   │           })
+│   │   │           observer.observe(sentinel.value)
+│   │   │         })
+│   │   │       
+│   │   │         watch(imagesFiltered, () => {
+│   │   │           displayedImages.value = []
+│   │   │           currentPage.value = 0
+│   │   │           loadMore()
+│   │   │         })
+│   │   │         </script>
+
+│   │   ├── HelloWorld.vue
+│   │   │       # Contents of HelloWorld.vue:
+│   │   │       <script setup>
+│   │   │       import { ref } from 'vue'
+│   │   │       
+│   │   │       defineProps({
+│   │   │         msg: String,
+│   │   │       })
+│   │   │       
+│   │   │       const count = ref(0)
+│   │   │       </script>
+│   │   │       
+│   │   │       <template>
+│   │   │         <h1>{{ msg }}</h1>
+│   │   │       
+│   │   │         <div class="card">
+│   │   │           <button type="button" @click="count++">count is {{ count }}</button>
+│   │   │           <p>
+│   │   │             Edit
+│   │   │             <code>components/HelloWorld.vue</code> to test HMR
+│   │   │           </p>
+│   │   │         </div>
+│   │   │       
+│   │   │         <p>
+│   │   │           Check out
+│   │   │           <a href="https://vuejs.org/guide/quick-start.html#local" target="_blank"
+│   │   │             >create-vue</a
+│   │   │           >, the official Vue + Vite starter
+│   │   │         </p>
+│   │   │         <p>
+│   │   │           Learn more about IDE Support for Vue in the
+│   │   │           <a
+│   │   │             href="https://vuejs.org/guide/scaling-up/tooling.html#ide-support"
+│   │   │             target="_blank"
+│   │   │             >Vue Docs Scaling up Guide</a
+│   │   │           >.
+│   │   │         </p>
+│   │   │         <p class="read-the-docs">Click on the Vite and Vue logos to learn more</p>
+│   │   │       </template>
+│   │   │       
+│   │   │       <style scoped>
+│   │   │       .read-the-docs {
+│   │   │         color: #888;
+│   │   │       }
+│   │   │       </style>
+
+│   │   ├── ImageCard.vue
+│   │   │       # Contents of ImageCard.vue:
+│   │   │       <template>
+│   │   │           <div class="break-inside-avoid overflow-hidden rounded shadow-lg mb-4">
+│   │   │             <img :src="image.url" alt="Image" class="w-full object-cover" />
+│   │   │             <div class="p-2 flex flex-wrap gap-1">
+│   │   │               <span
+│   │   │                 v-for="tag in image.hashtags"
+│   │   │                 :key="tag"
+│   │   │                 @click="$emit('tag-click', tag)"
+│   │   │                 class="text-blue-500 text-xs bg-blue-100 px-2 py-1 rounded cursor-pointer hover:bg-blue-200"
+│   │   │               >
+│   │   │                 {{ tag }}
+│   │   │               </span>
+│   │   │             </div>
+│   │   │           </div>
+│   │   │         </template>
+│   │   │       
+│   │   │         <script setup>
+│   │   │           defineProps({ image: Object })
+│   │   │           defineEmits(['tag-click'])
+│   │   │         </script>
+│   │   │       
+
+│   │   └── SearchBar.vue
+│   │           # Contents of SearchBar.vue:
+│   │           <template>
+│   │               <div class="my-4">
+│   │                 <input
+│   │                   type="text"
+│   │                   v-model="inputValue"
+│   │                   @input="$emit('update:searchTerm', inputValue)"
+│   │                   placeholder="Search by hashtag..."
+│   │                   class="w-full border p-2 rounded"
+│   │                 />
+│   │               </div>
+│   │             </template>
+│   │           
+│   │             <script setup>
+│   │             import { ref } from 'vue'
+│   │             const inputValue = ref('')
+│   │             </script>
+
+│   ├── main.js
+│   │       # Contents of main.js:
+│   │       import { createApp } from 'vue'
+│   │       import './style.css'
+│   │       import App from './App.vue'
+│   │       import './assets/main.css'
+│   │       
+│   │       createApp(App).mount('#app')
+
+│   ├── mockData.js
+│   │       # Contents of mockData.js:
+│   │       // export const images = [
+│   │       //     {
+│   │       //       id: 1,
+│   │       //       url: "https://picsum.photos/400/300?random=1",
+│   │       //       hashtags: ["#nature", "#mountain"]
+│   │       //     },
+│   │       //     {
+│   │       //       id: 2,
+│   │       //       url: "https://picsum.photos/400/300?random=2",
+│   │       //       hashtags: ["#city", "#night"]
+│   │       //     },
+│   │       //     {
+│   │       //       id: 3,
+│   │       //       url: "https://picsum.photos/400/300?random=3",
+│   │       //       hashtags: ["#beach", "#sunset"]
+│   │       //     }
+│   │       //   ]
+│   │       export const images = Array.from({ length: 50 }, (_, i) => ({
+│   │           id: i + 1,
+│   │           url: `https://picsum.photos/${300 + (i % 100)}/${200 + (i % 100)}?random=${i + 1}`,
+│   │           hashtags: Array.from({ length: Math.floor(Math.random() * 6) + 1 }, (_, j) => `#tag${j + 1}`)
+│   │         }))
+
+│   ├── postcss.config.js
+│   │       # Contents of postcss.config.js:
+│   │       export default {
+│   │           plugins: {
+│   │             tailwindcss: {},
+│   │             autoprefixer: {},
+│   │           },
+│   │         }
+│   │       
+
+│   ├── style.css
+│   │       # Contents of style.css:
+│   │       :root {
+│   │         font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+│   │         line-height: 1.5;
+│   │         font-weight: 400;
+│   │       
+│   │         color-scheme: light dark;
+│   │         color: rgba(255, 255, 255, 0.87);
+│   │         background-color: #242424;
+│   │       
+│   │         font-synthesis: none;
+│   │         text-rendering: optimizeLegibility;
+│   │         -webkit-font-smoothing: antialiased;
+│   │         -moz-osx-font-smoothing: grayscale;
+│   │       }
+│   │       
+│   │       a {
+│   │         font-weight: 500;
+│   │         color: #646cff;
+│   │         text-decoration: inherit;
+│   │       }
+│   │       a:hover {
+│   │         color: #535bf2;
+│   │       }
+│   │       
+│   │       body {
+│   │         margin: 0;
+│   │         display: flex;
+│   │         place-items: center;
+│   │         min-width: 320px;
+│   │         min-height: 100vh;
+│   │       }
+│   │       
+│   │       h1 {
+│   │         font-size: 3.2em;
+│   │         line-height: 1.1;
+│   │       }
+│   │       
+│   │       button {
+│   │         border-radius: 8px;
+│   │         border: 1px solid transparent;
+│   │         padding: 0.6em 1.2em;
+│   │         font-size: 1em;
+│   │         font-weight: 500;
+│   │         font-family: inherit;
+│   │         background-color: #1a1a1a;
+│   │         cursor: pointer;
+│   │         transition: border-color 0.25s;
+│   │       }
+│   │       button:hover {
+│   │         border-color: #646cff;
+│   │       }
+│   │       button:focus,
+│   │       button:focus-visible {
+│   │         outline: 4px auto -webkit-focus-ring-color;
+│   │       }
+│   │       
+│   │       .card {
+│   │         padding: 2em;
+│   │       }
+│   │       
+│   │       #app {
+│   │         max-width: 1280px;
+│   │         margin: 0 auto;
+│   │         padding: 2rem;
+│   │         text-align: center;
+│   │       }
+│   │       
+│   │       @media (prefers-color-scheme: light) {
+│   │         :root {
+│   │           color: #213547;
+│   │           background-color: #ffffff;
+│   │         }
+│   │         a:hover {
+│   │           color: #747bff;
+│   │         }
+│   │         button {
+│   │           background-color: #f9f9f9;
+│   │         }
+│   │       }
+
+│   └── tailwind.config.js
+│           # Contents of tailwind.config.js:
+│           /** @type {import('tailwindcss').Config} */
+│           export default {
+│               content: [
+│                 "./index.html",
+│                 "./src/**/*.{vue,js,ts,jsx,tsx}",
+│               ],
+│               theme: {
+│                 extend: {},
+│               },
+│               plugins: [],
+│             }
+│           
+│           
+
+└── vite.config.js
+        # Contents of vite.config.js:
+        import { defineConfig } from 'vite'
+        import vue from '@vitejs/plugin-vue'
+        
+        // https://vite.dev/config/
+        export default defineConfig({
+          plugins: [vue()],
+        })
+
